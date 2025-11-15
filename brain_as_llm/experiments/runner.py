@@ -55,6 +55,7 @@ def run(
     typer.secho(f"Saved results to {output_path}", fg=typer.colors.GREEN)
     summary = _summarize(metrics)
     typer.echo(json.dumps(summary, indent=2))
+    typer.echo(_format_run_summary(summary))
 
 
 @app.command()
@@ -96,6 +97,7 @@ def loop(
         summary = _summarize(metrics)
         typer.echo(f"Iteration {iteration} saved to {output_path}")
         typer.echo(f"Summary: {json.dumps(summary)}")
+        typer.echo(_format_run_summary(summary))
 
         if iteration >= min_iterations and _expectations_met(metrics):
             successful_iteration = iteration
@@ -255,6 +257,32 @@ def _summarize(metrics: Iterable[Dict[str, Any]]) -> Dict[str, float]:
         "avg_brain_reasoner_tokens": mean(item["brain_reasoner_tokens"] for item in data),
         "avg_brain_reasoner_latency": mean(item["brain_reasoner_latency"] for item in data),
     }
+
+
+def _format_run_summary(summary: Dict[str, float]) -> str:
+    if not summary:
+        return "No metrics recorded for this run."
+
+    def _format_delta(brain_value: float, baseline_value: float) -> str:
+        delta = brain_value - baseline_value
+        if baseline_value == 0:
+            pct = "N/A"
+        else:
+            pct_change = (delta / baseline_value) * 100
+            pct = f"{pct_change:+.1f}%"
+        return f"{delta:+.1f} ({pct})"
+
+    token_delta = _format_delta(summary["avg_brain_tokens"], summary["avg_baseline_tokens"])
+    latency_delta = _format_delta(summary["avg_brain_latency"], summary["avg_baseline_latency"])
+    reasoner_delta = _format_delta(summary["avg_brain_reasoner_tokens"], summary["avg_baseline_tokens"])
+
+    lines = [
+        f"Baseline vs brain summary over {int(summary['cases'])} testcases:",
+        f"- Avg total tokens: baseline={summary['avg_baseline_tokens']:.1f}, brain={summary['avg_brain_tokens']:.1f}, delta={token_delta}",
+        f"- Avg latency (s): baseline={summary['avg_baseline_latency']:.3f}, brain={summary['avg_brain_latency']:.3f}, delta={latency_delta}",
+        f"- Avg reasoner tokens vs baseline: brain_reasoner={summary['avg_brain_reasoner_tokens']:.1f}, delta={reasoner_delta}",
+    ]
+    return "\n".join(lines)
 
 
 def _expectations_met(metrics: Iterable[Dict[str, Any]]) -> bool:
