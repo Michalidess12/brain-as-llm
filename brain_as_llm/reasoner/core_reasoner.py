@@ -247,6 +247,7 @@ class CoreReasoner:
         notes: str,
         plan: ControlPlan,
     ) -> str:
+        include_canvas = step_index == 1 or total_steps == 1
         if total_steps == 1:
             instructions = "Provide a direct, well-structured answer."
         elif step_index == 1:
@@ -261,19 +262,19 @@ class CoreReasoner:
             budget_line += f"Target expert tokens: {plan.target_expert_tokens}. "
         if plan.target_latency_ms:
             budget_line += f"Target latency: {plan.target_latency_ms} ms. "
-        prompt = textwrap.dedent(
-            f"""
-            QUESTION: {question.strip()}
-            {canvas_text}
-            Controller notes: {notes}
-            Strategy: {plan.strategy} | Speculation: {plan.speculation_mode}
-            {budget_line.strip()}
-            Step {step_index}/{total_steps}. {instructions}
-            """
-        ).strip()
+        prompt_parts = [
+            f"QUESTION: {question.strip()}",
+        ]
+        if include_canvas:
+            prompt_parts.append(canvas_text)
+        prompt_parts.append(f"Controller notes: {notes}")
+        prompt_parts.append(f"Strategy: {plan.strategy} | Speculation: {plan.speculation_mode}")
+        if budget_line.strip():
+            prompt_parts.append(budget_line.strip())
+        prompt_parts.append(f"Step {step_index}/{total_steps}. {instructions}")
         if prior:
-            prompt += f"\nPrior output:\n{prior.strip()}"
-        return prompt
+            prompt_parts.append(f"Prior output:\n{prior.strip()}")
+        return "\n".join(part for part in prompt_parts if part)
 
     def _estimate_confidence(self, text: str) -> float:
         if not text:

@@ -97,11 +97,23 @@ class CoreController:
         canvas: Dict[str, Any],
         *,
         budget: Optional[BudgetContract] = None,
+        policy_name: Optional[str] = None,
+        raw_text: Optional[str] = None,
     ) -> ControlPlan:
         """Return a control plan for the provided canvas and question."""
 
         state_snapshot = self._state_store.load_state() or {}
-        prompt = self._build_prompt(question=question, canvas=canvas, state=state_snapshot, budget=budget)
+        maybe_passthrough = self._maybe_costcut_passthrough(policy_name, question, raw_text or "", canvas)
+        if maybe_passthrough:
+            return maybe_passthrough
+
+        prompt = self._build_prompt(
+            question=question,
+            canvas=canvas,
+            state=state_snapshot,
+            budget=budget,
+            policy_name=policy_name,
+        )
         start = time.perf_counter()
         response = self._llm.chat(
             messages=[
@@ -113,7 +125,13 @@ class CoreController:
             max_tokens=self._config.max_tokens,
         )
         latency = time.perf_counter() - start
-        plan_dict = self._parse_response(response["text"])
+        plan_dict = self._apply_policy_overrides(
+            self._parse_response(response["text"]),
+            policy_name=policy_name,
+            raw_text=raw_text,
+            question=question,
+            canvas=canvas,
+        )
         plan = ControlPlan(
             **plan_dict,
             usage=response.get("usage", {}),
@@ -129,6 +147,7 @@ class CoreController:
         canvas: Dict[str, Any],
         state: Dict[str, Any],
         budget: Optional[BudgetContract],
+        policy_name: Optional[str],
     ) -> str:
         notes = textwrap.shorten(str(canvas.get("notes_for_reasoner", "")), width=400, placeholder="...")
         summaries = canvas.get("summaries") or canvas.get("key_points") or []
@@ -142,6 +161,7 @@ class CoreController:
             FACTS: {canvas.get('facts', [])[:5]}
             NOTES: {notes}
             BUDGET: {prompt_budget}
+            POLICY: {policy_name or 'default'}
             Provide the control JSON.
             """
         ).strip()
@@ -191,6 +211,85 @@ class CoreController:
         if stripped.startswith("json"):
             stripped = stripped[4:].strip()
         return stripped
+
+    def _maybe_costcut_passthrough(
+        self,
+        policy_name: Optional[str],
+        question: str,
+        raw_text: str,
+        canvas: Dict[str, Any],
+    ) -> Optional[ControlPlan]:
+        if policy_name != "openai_brain_costcut_v1":
+            return None
+        if not _looks_simple_question(question):
+            return None
+        approx_tokens = _approx_tokens_from_raw(raw_text, canvas)
+        if approx_tokens > 450:
+            return None
+        return ControlPlan(
+            difficulty="easy",
+            max_reasoning_passes=1,
+            needs_full_context=True,
+            strategy="baseline_passthrough",
+            target_expert_tokens=None,
+            target_latency_ms=None,
+            speculation_mode="off",
+            notes_for_reasoner="Route through baseline pipeline to save cost.",
+            usage={},
+            latency_seconds=0.0,
+        )
+
+    def _apply_policy_overrides(
+        self,
+        plan_dict: Dict[str, Any],
+        *,
+        policy_name: Optional[str],
+        raw_text: Optional[str],
+        question: str,
+        canvas: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        if policy_name != "openai_brain_costcut_v1":
+            return plan_dict
+
+        approx_tokens = _approx_tokens_from_raw(raw_text or "", canvas)
+        simple_q = _looks_simple_question(question)
+        difficulty = plan_dict.get("difficulty", "medium")
+
+        max_passes = 2 if difficulty == "hard" else 1
+        plan_dict["max_reasoning_passes"] = min(plan_dict.get("max_reasoning_passes", 1), max_passes)
+        plan_dict["needs_full_context"] = False
+        plan_dict["target_expert_tokens"] = min(plan_dict.get("target_expert_tokens") or 400, 400)
+        plan_dict["target_latency_ms"] = min(plan_dict.get("target_latency_ms") or 7000, 7000)
+        plan_dict["speculation_mode"] = "off"
+
+        if approx_tokens < 600 and simple_q:
+            if plan_dict.get("strategy") not in {"baseline_passthrough", "small_only"}:
+                plan_dict["strategy"] = "small_only"
+
+        return plan_dict
+
+
+def _approx_tokens_from_raw(raw_text: str, canvas: Dict[str, Any]) -> int:
+    if raw_text:
+        return max(1, len(raw_text.split()))
+    raw_chunks = canvas.get("raw_chunks") or []
+    return sum(len(chunk.split()) for chunk in raw_chunks)
+
+
+def _looks_simple_question(question: str) -> bool:
+    lowered = (question or "").lower()
+    keywords = [
+        "summarize",
+        "summary",
+        "list",
+        "bullet",
+        "key point",
+        "main point",
+        "overview",
+        "short answer",
+        "short summary",
+    ]
+    return any(keyword in lowered for keyword in keywords)
 
 
 __all__ = ["CoreController", "ControlPlan", "ControllerConfig", "BudgetContract"]

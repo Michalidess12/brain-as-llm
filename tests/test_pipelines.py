@@ -51,6 +51,25 @@ def test_brain_pipeline_runs_with_dummy_client(tmp_path: Path):
     assert result["answer"].startswith("SMALL")
 
 
+def test_costcut_policy_baseline_passthrough(tmp_path: Path):
+    dummy = DummyLLMClient(["Baseline answer"])
+    result = run_brain_pipeline(
+        small_client=dummy,
+        large_client=dummy,
+        raw_text="short memo for summary",
+        question="Summarize the key points",
+        encoder_model="dummy-small",
+        controller_model="dummy-small",
+        reasoner_model="dummy-large",
+        canvas_store=CanvasStore(tmp_path),
+        doc_id="doc-short",
+        policy_name="openai_brain_costcut_v1",
+    )
+    assert result["strategy_used"] == "baseline_passthrough"
+    assert result["usage"]["encoder_tokens"]["total_tokens"] == 0
+    assert result["usage"]["reasoner_tokens"]["total_tokens"] > 0
+
+
 def test_cli_runner_creates_results(tmp_path: Path):
     raw_path = tmp_path / "doc.txt"
     raw_path.write_text("Short raw text", encoding="utf-8")

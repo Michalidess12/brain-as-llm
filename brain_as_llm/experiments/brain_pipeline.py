@@ -1,15 +1,17 @@
-"\"\"\"Brain-as-LLM pipeline orchestration.\"\"\""
+"""Brain-as-LLM pipeline orchestration."""
 from __future__ import annotations
 
+import re
 import time
 from typing import Any, Dict, Optional
 
 from ..controller import BudgetContract, ControlPlan, CoreController, ControllerConfig
-from ..encoder import Canvas, EncoderConfig, TextEncoder, TextEncoderResult
+from ..encoder import EncoderConfig, TextEncoder, TextEncoderResult
 from ..llm_clients.base import LLMClient
 from ..reasoner import CoreReasoner, ReasonerConfig, ReasonerResult
 from ..state.canvas_store import CanvasStore
 from ..utils.metrics import sum_usage
+from .baseline_pipeline import run_baseline_pipeline
 
 
 def run_brain_pipeline(
@@ -28,10 +30,57 @@ def run_brain_pipeline(
     doc_id: Optional[str] = None,
     policy_name: str = "default_brain_v1",
     budget: Optional[BudgetContract] = None,
-) -> Dict[str, Any]:
+    ) -> Dict[str, Any]:
     """Run the encoder + controller + reasoner pipeline."""
 
     start = time.perf_counter()
+
+    if _should_costcut_passthrough(policy_name, raw_text, question):
+        baseline = run_baseline_pipeline(
+            large_client,
+            raw_text=raw_text,
+            question=question,
+            model_name=reasoner_model,
+            temperature=0.2,
+            policy_name=f"{policy_name}_baseline_passthrough",
+        )
+        plan = ControlPlan(
+            difficulty="easy",
+            max_reasoning_passes=1,
+            needs_full_context=True,
+            strategy="baseline_passthrough",
+            target_expert_tokens=None,
+            target_latency_ms=None,
+            speculation_mode="off",
+            notes_for_reasoner="Short-circuit to baseline for cost savings.",
+        )
+        zero_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+        return {
+            "answer": baseline["answer"],
+            "plan": plan.to_dict(),
+            "policy_name": policy_name,
+            "strategy_used": "baseline_passthrough",
+            "speculation_mode": "off",
+            "debug": {
+                "canvas": None,
+                "intermediate_steps": [],
+                "chunk_summaries": [],
+                "stages": [],
+                "encoder_from_cache": False,
+            },
+            "usage": {
+                "encoder_tokens": zero_usage,
+                "controller_tokens": zero_usage,
+                "reasoner_tokens": baseline["usage"],
+            },
+            "latency_seconds": baseline["latency_seconds"],
+            "reasoner_latency_seconds": baseline["latency_seconds"],
+        }
+
+    effective_budget = budget
+    if effective_budget is None and policy_name == "openai_brain_costcut_v1":
+        effective_budget = BudgetContract(max_latency_ms=7000, max_expert_tokens=500, priority="cost")
+
     encoder = TextEncoder(small_client, encoder_model, encoder_config, canvas_store=canvas_store)
     controller = CoreController(small_client, controller_model, config=controller_config)
     reasoner = CoreReasoner(
@@ -43,7 +92,13 @@ def run_brain_pipeline(
     )
 
     encoder_result: TextEncoderResult = encoder.encode(raw_text=raw_text, question=question, doc_id=doc_id)
-    plan: ControlPlan = controller.plan(question=question, canvas=encoder_result.canvas.to_dict(), budget=budget)
+    plan: ControlPlan = controller.plan(
+        question=question,
+        canvas=encoder_result.canvas.to_dict(),
+        budget=effective_budget,
+        policy_name=policy_name,
+        raw_text=raw_text,
+    )
     reasoner_result: ReasonerResult = reasoner.reason(
         question=question,
         canvas=encoder_result.canvas.to_dict(),
@@ -51,7 +106,11 @@ def run_brain_pipeline(
         raw_text=raw_text,
     )
 
-    encoder_usage = sum_usage(chunk["usage"] for chunk in encoder_result.chunk_summaries) if encoder_result.chunk_summaries else {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+    encoder_usage = (
+        sum_usage(chunk["usage"] for chunk in encoder_result.chunk_summaries)
+        if encoder_result.chunk_summaries
+        else {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+    )
     controller_usage = plan.usage
     expert_usage = sum_usage(reasoner_result.usage)
     reasoner_latency = sum(reasoner_result.step_latencies)
@@ -81,3 +140,23 @@ def run_brain_pipeline(
 
 
 __all__ = ["run_brain_pipeline"]
+
+
+def _should_costcut_passthrough(policy_name: str, raw_text: str, question: str) -> bool:
+    if policy_name != "openai_brain_costcut_v1":
+        return False
+    approx_tokens = len(raw_text.split())
+    if approx_tokens > 400:
+        return False
+    lowered = question.lower()
+    simple_patterns = [
+        r"\bsummarize\b",
+        r"\bsummary\b",
+        r"\bbullet",
+        r"\blist\b",
+        r"\bkey point",
+        r"\bmain point",
+        r"\bshort\b",
+        r"\boverview\b",
+    ]
+    return any(re.search(pattern, lowered) for pattern in simple_patterns)
