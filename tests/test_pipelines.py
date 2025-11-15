@@ -135,6 +135,31 @@ def test_analyze_policies_command(tmp_path: Path):
     assert result.exit_code == 0, result.output
 
 
+def test_interpret_results_command(tmp_path: Path):
+    results_path = tmp_path / "experiments.jsonl"
+    record = {
+        "id": "case-1",
+        "baseline": {
+            "usage": {"prompt_tokens": 50, "completion_tokens": 10},
+            "latency_seconds": 0.2,
+        },
+        "brain": {
+            "usage": {
+                "encoder_tokens": {"total_tokens": 30},
+                "controller_tokens": {"total_tokens": 15},
+                "reasoner_tokens": {"total_tokens": 20},
+            },
+            "latency_seconds": 0.15,
+            "reasoner_latency_seconds": 0.07,
+        },
+    }
+    results_path.write_text(json.dumps(record), encoding="utf-8")
+    runner = CliRunner()
+    result = runner.invoke(app, ["interpret-results", str(results_path)])
+    assert result.exit_code == 0, result.output
+    assert "Baseline vs brain summary" in result.output
+
+
 def test_baseline_pipeline_works_with_dummy_client():
     dummy = DummyLLMClient(["Simple baseline answer"])
     result = run_baseline_pipeline(
