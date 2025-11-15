@@ -1,0 +1,333 @@
+You are an expert AI engineer working on the repository:
+
+  https://github.com/Michalidess12/brain-as-llm
+
+This repo is a research prototype for a "brain-as-LLM" architecture with:
+
+- encoder → canvas
+- controller → control plan
+- reasoner → multi-step reasoning
+- baseline vs. brain pipelines
+- Typer-based experiment runner
+- OpenAI + dummy LLM clients
+
+Your task in this session:
+
+  1. Verify and, if needed, tighten the OpenAI backend wiring.
+  2. Create / refine a realistic testcase set (JSONL) using real docs from data/.
+  3. Run **baseline+OpenAI** as a sanity check of credentials + environment.
+  4. Run **brain+OpenAI** (encoder+controller+reasoner) on the same testcases.
+  5. Make sure metrics are logged clearly so we can compare baseline vs brain.
+  6. Do NOT add speculative decoding or extra advanced features yet; we just want a clean Phase 1 experiment.
+
+Be precise and incremental. When you modify a file, show the full updated file, not just diffs.
+
+────────────────────────────────────────
+1. REPO CONTEXT & GOAL OF THIS ROUND
+────────────────────────────────────────
+
+The repo layout (from README) is:
+
+  brain_as_llm/
+    config.py              # Env-driven settings and model names
+    llm_clients/           # Base interface, OpenAI client, dummy client
+    encoder/               # TextEncoder that builds the canvas
+    controller/            # CoreController (cost brain)
+    reasoner/              # CoreReasoner (multi-pass)
+    state/                 # State stores
+    experiments/
+      baseline_pipeline.py
+      brain_pipeline.py
+      runner.py            # Typer CLI
+    utils/
+
+  data/
+    ... sample docs, testcases, canvas_store, etc.
+
+The README already documents:
+
+- environment variables for OpenAI-like APIs:
+    OPENAI_API_KEY
+    OPENAI_BASE_URL (optional)
+    BRAIN_SMALL_MODEL
+    BRAIN_LARGE_MODEL
+
+- how to run:
+    python -m brain_as_llm.experiments.runner run data/testcases.jsonl --output-dir results --policy-name <name>
+    python -m brain_as_llm.experiments.runner loop ... --use-dummy ...
+    python -m brain_as_llm.experiments.runner analyze-policies ...
+
+I want to use THIS session to:
+
+- Run one solid experiment on **real OpenAI models**:
+  - baseline pipeline (single call) vs brain pipeline (encoder+controller+reasoner),
+  - measure token usage and latency for both,
+  - confirm that end-to-end flow works correctly against OpenAI.
+
+Later we’ll do more advanced stuff; for now, we’re just validating the OpenAI path and getting real numbers.
+
+────────────────────────────────────────
+2. STEP 0 – ENV & CONFIG CHECK (OPENAI)
+────────────────────────────────────────
+
+1. Open `brain_as_llm/config.py` and verify:
+   - There is a configuration for:
+     - `OPENAI_API_KEY` (or generic API key)
+     - `OPENAI_BASE_URL` (optional override)
+     - `BRAIN_SMALL_MODEL`
+     - `BRAIN_LARGE_MODEL`
+   - There is a way to pick between dummy vs real backend (either a flag or parameter).
+
+2. Open `brain_as_llm/llm_clients/openai_client.py` and:
+   - Confirm it uses:
+     - env var `OPENAI_API_KEY` (or equivalent) for auth.
+     - env var `OPENAI_BASE_URL` or default `https://api.openai.com/v1`.
+   - Confirm it exposes a clean `LLMClient`-compatible interface with methods like:
+     - `generate(...)`
+     - returns both text and token usage (prompt, completion, total) if possible.
+   - If the code still targets the older OpenAI API patterns, adjust it to use the CURRENT Python client pattern:
+     - `from openai import OpenAI`
+     - `client = OpenAI(api_key=..., base_url=...)`
+     - `client.chat.completions.create(...)` or `client.responses.create(...)` depending on current setup.
+   - Make sure all necessary fields (model, messages, temperature, max tokens) are passed correctly.
+
+3. Open `brain_as_llm/llm_clients/dummy_client.py` and just ensure:
+   - It is still deterministic and compatible with the `LLMClient` interface.
+   - It should NOT be used when we test OpenAI; we’ll disable `--use-dummy` in our commands.
+
+4. Do NOT hardcode any keys in the repo. Keep everything behind env vars.
+
+You do NOT run code yourself; just make sure the code is correct and ready.
+
+────────────────────────────────────────
+3. STEP 1 – TESTCASES SETUP (data/testcases.jsonl)
+────────────────────────────────────────
+
+Now prepare a realistic testcase file for experiments.
+
+1. Inspect the `data/` directory:
+   - List existing `.txt` files (e.g., `product_strategy.txt`, `risk_briefing.txt`, or similar).
+   - Identify 2–5 reasonably long documents (ideally > 1000 tokens each) for long-context behavior.
+
+2. Open or create `data/testcases.jsonl` and ensure it has **at least 15–30 lines** with structure:
+
+   {
+     "id": "doc1_risks",
+     "raw_text_path": "data/product_strategy.txt",
+     "question": "What are the main strategic risks described in this document?"
+   }
+
+   {
+     "id": "doc1_summary",
+     "raw_text_path": "data/product_strategy.txt",
+     "question": "Summarize the main points in 5 bullet points."
+   }
+
+   {
+     "id": "doc1_compare",
+     "raw_text_path": "data/product_strategy.txt",
+     "question": "What are the key differences between the old and new approach in this document?"
+   }
+
+   {
+     "id": "doc2_risks",
+     "raw_text_path": "data/risk_briefing.txt",
+     "question": "List the critical operational risks and their impact."
+   }
+
+   ... etc.
+
+   Guidelines:
+   - Use 2–4 questions per document.
+   - Include both summarization and analysis questions.
+   - At least one question per doc should force deep reading (e.g. “Compare X and Y”, “What changed since last quarter?”, “Which stakeholders are impacted and how?”).
+
+3. You can leave `expected_notes` or other fields optional. Keep schema simple for now:
+   - `id`, `raw_text_path`, `question`.
+   - If runner requires any extra fields, include them with safe defaults.
+
+Make sure the JSONL is syntactically valid (one JSON object per line, no trailing commas).
+
+────────────────────────────────────────
+4. STEP 2 – VERIFY RUNNER & PIPELINES
+────────────────────────────────────────
+
+We want the runner to:
+
+- Use OpenAI backend when `--use-dummy` is NOT specified.
+- For each testcase:
+  - Load raw text from `raw_text_path`.
+  - Run baseline pipeline.
+  - Run brain pipeline.
+  - Log tokens + latency for both.
+
+Check the code now:
+
+1. Open `brain_as_llm/experiments/baseline_pipeline.py`:
+   - Confirm it exposes a function like `run_baseline_case(...)` that:
+     - takes `(llm_client, raw_text, question, maybe config/policy_name)`
+     - invokes the large/expert model on full context in one shot
+     - returns:
+       - `answer`
+       - `usage` (tokens)
+       - `latency`
+   - If token usage / latency are not captured yet, add:
+     - timing via `time.monotonic()`
+     - usage from LLM client response (if available).
+
+2. Open `brain_as_llm/experiments/brain_pipeline.py`:
+   - Confirm it exposes a function like `run_brain_case(...)` that:
+     - runs encoder → controller → reasoner
+     - uses the same `llm_client` abstraction, but:
+       - small model vs large model are chosen based on config and/or internal strategy
+     - returns:
+       - `answer`
+       - detailed metrics per stage (encoder/controller/reasoner),
+       - at least: expert reasoner token usage and latency.
+
+3. Open `brain_as_llm/experiments/runner.py`:
+   - Confirm there is a Typer app with a `run` command that:
+     - accepts parameters:
+       - `testcases_path`
+       - `output_dir`
+       - `policy_name`
+       - `use_dummy` (bool)
+       - maybe `canvas_store_dir`
+     - iterates testcases and for each:
+       - runs **both** baseline and brain pipelines
+       - writes one line per testcase to an output JSONL file under `output_dir/`
+         - include:
+           - `id`
+           - `policy_name`
+           - baseline metrics: tokens, latency
+           - brain metrics: tokens, latency (expert + total)
+           - answers (can be included, or at least baseline vs brain difference)
+       - prints aggregate metrics (avg baseline vs brain).
+
+   - If the `run` command does not yet run **both** pipelines, modify it so that it always does:
+     - baseline
+     - brain
+   - Ensure `--use-dummy` controls whether the `llm_client` is dummy or OpenAI. Default should be **real OpenAI** when `--use-dummy` is False.
+
+4. Confirm that `runner.run`:
+   - Names the output file something like `results/experiments_<timestamp>.jsonl`.
+   - Includes enough fields for later analysis (`policy_name`, token/latency per pipeline).
+
+Do not change the overall CLI UX more than necessary; just ensure it behaves as described.
+
+────────────────────────────────────────
+5. STEP 3 – PHASE 1 EXPERIMENT: BASELINE+OPENAI vs BRAIN+OPENAI
+────────────────────────────────────────
+
+Now, encode into the repo (in comments or README) and echo to the user the commands they should run:
+
+1. **Sanity: tests**
+
+   - Command (document it for the user):
+
+     python -m venv .venv
+     source .venv/bin/activate   # or .venv\Scripts\activate on Windows
+     pip install -r requirements.txt
+     pytest -q
+
+   - You don’t run them, just make sure everything in `tests/` uses the dummy client and should pass.
+
+2. **Set OpenAI env vars (to put in README or a comment block):**
+
+   export OPENAI_API_KEY="sk-..."                          # provided by user
+   export OPENAI_BASE_URL="https://api.openai.com/v1"      # default; optional
+   export BRAIN_SMALL_MODEL="gpt-4o-mini"                  # example
+   export BRAIN_LARGE_MODEL="gpt-4o"                       # example
+
+3. **Run a first OpenAI-backed experiment (baseline + brain):**
+
+   - Command to document for the user:
+
+     python -m brain_as_llm.experiments.runner run data/testcases.jsonl \
+       --output-dir results \
+       --policy-name "openai_brain_v1"
+
+   - `--use-dummy` must NOT be passed here (we want real OpenAI).
+   - The runner should:
+     - for each testcase:
+       - call baseline pipeline (OpenAI)
+       - call brain pipeline (OpenAI)
+       - log metrics in `results/experiments_<timestamp>.jsonl`
+     - print aggregated averages to stdout, e.g.:
+
+       - `baseline_avg_expert_tokens`
+       - `brain_avg_expert_tokens`
+       - `baseline_avg_latency_ms`
+       - `brain_avg_latency_ms`
+
+4. **Optional: make a small helper in runner to print a short summary after run:**
+
+   For example, after writing JSONL, compute and print something like:
+
+   - “Baseline vs Brain (OpenAI) summary for <N> testcases:”
+   - “Expert tokens: baseline=XXX, brain=YYY (Δ = -ZZZ, -PP%)”
+   - “Latency: baseline=AAA ms, brain=BBB ms (Δ = +/− CCC, DD%)”
+
+This summary is mostly for convenience so the user doesn’t have to manually parse JSONL.
+
+────────────────────────────────────────
+6. STEP 4 – POLICY NAME & FUTURE ANALYSIS (LIGHT TOUCH)
+────────────────────────────────────────
+
+We will use policy names to compare experiment runs later (with `analyze-policies`).
+
+1. Ensure that:
+
+   - Every run from `runner.run` includes `policy_name` in each JSONL record.
+   - For this Phase 1 experiment, use a clear policy name, e.g.:
+     - `"openai_brain_v1"` for the brain pipeline configuration.
+     - `"openai_baseline_v1"` if you log baseline separately or tag it within the same record.
+
+   If the current JSONL schema doesn’t separate “baseline policy name” vs “brain policy name”:
+   - At minimum, include `policy_name` (for the brain pipeline) and fields `baseline_*` for baseline metrics.
+
+2. Do not implement the full policy manager logic now; just keep the schema consistent with `analyze-policies` so it can be reused later.
+
+────────────────────────────────────────
+7. STEP 5 – READABILITY & DOCS
+────────────────────────────────────────
+
+Update the README minimally:
+
+1. Add a “Phase 1 – OpenAI baseline vs brain experiment” section describing:
+
+   - How to set env vars.
+   - How to prepare `data/testcases.jsonl`.
+   - The command to run:
+
+     python -m brain_as_llm.experiments.runner run data/testcases.jsonl \
+       --output-dir results \
+       --policy-name openai_brain_v1
+
+   - What output to expect (JSONL + a short summary).
+
+2. Ensure that the README clarifies:
+
+   - `--use-dummy` is for offline testing (no network).
+   - No flag = real OpenAI backend.
+
+────────────────────────────────────────
+8. GENERAL CODING INSTRUCTIONS
+────────────────────────────────────────
+
+- Always use type hints for new functions / dataclasses.
+- Keep code style consistent with existing files.
+- Don’t introduce breaking changes to the CLI without strong justification.
+- When you show code, show complete files for anything you change (config, clients, pipelines, runner, README, etc.).
+- If you need to add imports, do so explicitly at the top of files.
+- Assume the user will run the commands you echo; do NOT attempt to run them yourself.
+
+End goal of THIS prompt:
+
+- The repo is ready such that the user can:
+  1. Set OPENAI_* env vars.
+  2. Run `pytest -q`.
+  3. Run one command to compare baseline+OpenAI vs brain+OpenAI.
+  4. Open the JSONL + printed summary and see real-world token and latency numbers.
+
+Focus ONLY on making that flow robust and clean. We will add more advanced features (budget-aware controller, persistent canvas tricks, cascade, speculative decoding, etc.) in later iterations.
