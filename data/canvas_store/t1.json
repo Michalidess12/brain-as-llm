@@ -1,0 +1,22 @@
+{
+  "raw_chunks": [
+    "Short raw text"
+  ],
+  "summaries": [
+    "Chunk summary"
+  ],
+  "facts": [
+    "Fact A"
+  ],
+  "entities": [
+    {
+      "name": "Example",
+      "type": "concept",
+      "description": "placeholder"
+    }
+  ],
+  "quotes": [
+    "\"Quoted detail\""
+  ],
+  "notes_for_reasoner": null
+}

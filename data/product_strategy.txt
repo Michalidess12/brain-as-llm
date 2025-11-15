@@ -1,0 +1,12 @@
+The product strategy review describes a neuro-symbolic assistant designed for daily planning
+and health monitoring. The memo states that customers struggle with chaotic schedules, so the
+team proposes a multi-stage architecture that first compresses calendar streams and wearable
+data into a structured canvas. This canvas contains timelines of predicted commitments,
+entities such as teammates, medications, and devices, and direct quotes from recent
+communications. The expert reasoning module then performs scenario planning, highlighting
+risks like missed handoffs, medication conflicts, or duplicate meetings. Key milestones:
+- Q3 pilot with ten enterprise teams that already adopted the context compression plugin.
+- Q4 expansion that integrates with hospital record systems and adds clinician review loops.
+The risks listed include data quality gaps, regulatory questions for medical guidance, and
+latency when downloading raw transcripts. The memo emphasizes that a lightweight controller
+should adapt reasoning depth to difficulty so latency and token usage remain low.
