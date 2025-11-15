@@ -1,0 +1,34 @@
+{
+  "raw_chunks": [
+    "The product strategy review describes a neuro-symbolic assistant designed for daily planning\nand health monitoring. The memo states that customers struggle with chaotic schedules, so the\nteam proposes a multi-stage architecture that first compresses calendar streams and wearable\ndata into a structured canvas. This canvas contains timelines of predicted commitments,\nentities such as teammates, medications, and devices, and direct quotes from recent\ncommunications. The expert reasoning module then performs scenario planning, highlighting\nrisks like missed handoffs, medication conflicts, or duplicate meetings. Key milestones:\n- Q3 pilot with ten enterprise teams that already adopted the context compression plugin.\n- Q4 expansion that integrates with hospital record systems and adds clinician review loops.\nThe risks listed include data quality gaps, regulatory questions for medical guidance, and\nlatency when downloading raw transcripts. The memo emphasizes that a lightweight controller\nshould adapt reasoning depth to difficulty so latency and token usage remain low."
+  ],
+  "summaries": [
+    "The document outlines a product strategy for a neuro-symbolic assistant aimed at improving daily planning and health monitoring, addressing customer challenges with chaotic schedules through a structured approach."
+  ],
+  "facts": [
+    "The assistant compresses calendar streams and wearable data into a structured canvas.",
+    "The canvas includes timelines of predicted commitments and entities like teammates and medications.",
+    "An expert reasoning module performs scenario planning to identify risks.",
+    "Key milestones include a Q3 pilot with ten enterprise teams and a Q4 expansion to integrate with hospital record systems.",
+    "Risks include data quality gaps, regulatory questions, and latency issues."
+  ],
+  "entities": [
+    {
+      "name": "Customers",
+      "type": "Stakeholder",
+      "description": "Individuals struggling with chaotic schedules who will benefit from the neuro-symbolic assistant."
+    },
+    {
+      "name": "Enterprise Teams",
+      "type": "Stakeholder",
+      "description": "Teams participating in the Q3 pilot of the product."
+    },
+    {
+      "name": "Clinicians",
+      "type": "Stakeholder",
+      "description": "Healthcare professionals involved in the Q4 expansion for review loops."
+    }
+  ],
+  "quotes": [],
+  "notes_for_reasoner": "Focus on the roles of customers, enterprise teams, and clinicians in the product's development and implementation."
+}

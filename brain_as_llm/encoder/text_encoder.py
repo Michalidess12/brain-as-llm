@@ -156,8 +156,9 @@ class TextEncoder:
         ).strip()
 
     def _parse_summary_response(self, raw_text: str) -> Dict[str, Any]:
+        cleaned = self._clean_json_text(raw_text)
         try:
-            data = json.loads(raw_text)
+            data = json.loads(cleaned)
         except json.JSONDecodeError:
             logger.warning("Failed to parse encoder response as JSON; falling back to heuristic parsing")
             data = {
@@ -183,6 +184,15 @@ class TextEncoder:
         note = summary.get("notes_for_reasoner")
         combined = f"{canvas.notes_for_reasoner or ''}\n{note}".strip() if note else canvas.notes_for_reasoner
         canvas.notes_for_reasoner = combined or canvas.notes_for_reasoner
+
+    def _clean_json_text(self, text: str) -> str:
+        stripped = text.strip()
+        if stripped.startswith("```"):
+            lines = [line for line in stripped.splitlines() if not line.strip().startswith("```")]
+            stripped = "\n".join(lines).strip()
+        if stripped.lower().startswith("json"):
+            stripped = stripped[4:].strip()
+        return stripped
 
 
 __all__ = ["TextEncoder", "EncoderConfig", "TextEncoderResult", "Canvas"]

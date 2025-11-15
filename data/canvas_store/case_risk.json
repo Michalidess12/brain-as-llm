@@ -1,0 +1,22 @@
+{
+  "raw_chunks": [
+    "A compliance briefing outlines three categories of risk for a fintech launch in Latin America.\nFirst, macroeconomic volatility could reduce consumer lending appetite; the analysts cite\nArgentina's sudden policy shifts and Brazil's fluctuating benchmark rates. Second, data\nresidency laws require that sensitive financial telemetry remains inside national borders, so\nengineering must prepare hybrid deployments. Third, competition from super-app providers may\nundercut pricing. The document quotes regional partners describing the need for multilingual\nsupport teams and automated monitoring of rule changes. Proposed mitigations: phased rollouts\nstarting with Brazil and Chile, automated legal alerts, and frequent tabletop exercises."
+  ],
+  "summaries": [
+    "Chunk summary"
+  ],
+  "facts": [
+    "Fact A"
+  ],
+  "entities": [
+    {
+      "name": "Example",
+      "type": "concept",
+      "description": "placeholder"
+    }
+  ],
+  "quotes": [
+    "\"Quoted detail\""
+  ],
+  "notes_for_reasoner": null
+}

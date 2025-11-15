@@ -1,0 +1,36 @@
+{
+  "raw_chunks": [
+    "A compliance briefing outlines three categories of risk for a fintech launch in Latin America.\nFirst, macroeconomic volatility could reduce consumer lending appetite; the analysts cite\nArgentina's sudden policy shifts and Brazil's fluctuating benchmark rates. Second, data\nresidency laws require that sensitive financial telemetry remains inside national borders, so\nengineering must prepare hybrid deployments. Third, competition from super-app providers may\nundercut pricing. The document quotes regional partners describing the need for multilingual\nsupport teams and automated monitoring of rule changes. Proposed mitigations: phased rollouts\nstarting with Brazil and Chile, automated legal alerts, and frequent tabletop exercises."
+  ],
+  "summaries": [
+    "The document outlines risks for a fintech launch in Latin America and proposes mitigation steps."
+  ],
+  "facts": [
+    "Macroeconomic volatility may reduce consumer lending appetite.",
+    "Argentina's policy shifts and Brazil's benchmark rate fluctuations are cited as examples.",
+    "Data residency laws require sensitive financial data to remain within national borders.",
+    "Competition from super-app providers may affect pricing.",
+    "Proposed mitigations include phased rollouts, automated legal alerts, and tabletop exercises."
+  ],
+  "entities": [
+    {
+      "name": "Argentina",
+      "type": "Country",
+      "description": "Cited for sudden policy shifts affecting macroeconomic stability."
+    },
+    {
+      "name": "Brazil",
+      "type": "Country",
+      "description": "Cited for fluctuating benchmark rates impacting consumer lending."
+    },
+    {
+      "name": "super-app providers",
+      "type": "Business",
+      "description": "Competitors that may undercut pricing in the fintech market."
+    }
+  ],
+  "quotes": [
+    "The need for multilingual support teams and automated monitoring of rule changes."
+  ],
+  "notes_for_reasoner": "Focus on the proposed mitigations and the specific risks associated with the fintech launch."
+}

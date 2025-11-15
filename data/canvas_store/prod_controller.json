@@ -1,0 +1,43 @@
+{
+  "raw_chunks": [
+    "The product strategy review describes a neuro-symbolic assistant designed for daily planning\nand health monitoring. The memo states that customers struggle with chaotic schedules, so the\nteam proposes a multi-stage architecture that first compresses calendar streams and wearable\ndata into a structured canvas. This canvas contains timelines of predicted commitments,\nentities such as teammates, medications, and devices, and direct quotes from recent\ncommunications. The expert reasoning module then performs scenario planning, highlighting\nrisks like missed handoffs, medication conflicts, or duplicate meetings. Key milestones:\n- Q3 pilot with ten enterprise teams that already adopted the context compression plugin.\n- Q4 expansion that integrates with hospital record systems and adds clinician review loops.\nThe risks listed include data quality gaps, regulatory questions for medical guidance, and\nlatency when downloading raw transcripts. The memo emphasizes that a lightweight controller\nshould adapt reasoning depth to difficulty so latency and token usage remain low."
+  ],
+  "summaries": [
+    "The memo emphasizes a lightweight controller to adapt reasoning depth, which helps maintain low latency and token usage in a neuro-symbolic assistant designed for daily planning and health monitoring."
+  ],
+  "facts": [
+    "The neuro-symbolic assistant is designed for daily planning and health monitoring.",
+    "Customers struggle with chaotic schedules.",
+    "A multi-stage architecture compresses calendar streams and wearable data.",
+    "The structured canvas includes timelines, entities, and direct quotes.",
+    "The expert reasoning module performs scenario planning.",
+    "Key milestones include a Q3 pilot and Q4 expansion.",
+    "Risks include data quality gaps, regulatory questions, and latency issues."
+  ],
+  "entities": [
+    {
+      "name": "neuro-symbolic assistant",
+      "type": "product",
+      "description": "An assistant designed for daily planning and health monitoring."
+    },
+    {
+      "name": "calendar streams",
+      "type": "data",
+      "description": "Data related to scheduling and appointments."
+    },
+    {
+      "name": "wearable data",
+      "type": "data",
+      "description": "Information collected from wearable health devices."
+    },
+    {
+      "name": "expert reasoning module",
+      "type": "component",
+      "description": "Module that performs scenario planning and risk assessment."
+    }
+  ],
+  "quotes": [
+    "A lightweight controller should adapt reasoning depth to difficulty so latency and token usage remain low."
+  ],
+  "notes_for_reasoner": "Focus on the importance of adapting reasoning depth to optimize performance in terms of latency and token usage."
+}

@@ -1,0 +1,40 @@
+{
+  "raw_chunks": [
+    "A compliance briefing outlines three categories of risk for a fintech launch in Latin America.\nFirst, macroeconomic volatility could reduce consumer lending appetite; the analysts cite\nArgentina's sudden policy shifts and Brazil's fluctuating benchmark rates. Second, data\nresidency laws require that sensitive financial telemetry remains inside national borders, so\nengineering must prepare hybrid deployments. Third, competition from super-app providers may\nundercut pricing. The document quotes regional partners describing the need for multilingual\nsupport teams and automated monitoring of rule changes. Proposed mitigations: phased rollouts\nstarting with Brazil and Chile, automated legal alerts, and frequent tabletop exercises."
+  ],
+  "summaries": [
+    "The compliance briefing identifies three risk categories for a fintech launch in Latin America, emphasizing the need for risk management strategies that align with product roadmap priorities of latency and data quality."
+  ],
+  "facts": [
+    "Macroeconomic volatility may reduce consumer lending appetite.",
+    "Data residency laws require sensitive financial data to remain within national borders.",
+    "Competition from super-app providers could impact pricing.",
+    "Proposed mitigations include phased rollouts, automated legal alerts, and tabletop exercises."
+  ],
+  "entities": [
+    {
+      "name": "Argentina",
+      "type": "Country",
+      "description": "Country in Latin America facing sudden policy shifts."
+    },
+    {
+      "name": "Brazil",
+      "type": "Country",
+      "description": "Country in Latin America with fluctuating benchmark rates."
+    },
+    {
+      "name": "Chile",
+      "type": "Country",
+      "description": "Country in Latin America proposed for phased rollout."
+    },
+    {
+      "name": "super-app providers",
+      "type": "Business",
+      "description": "Competitors that may undercut pricing in the fintech market."
+    }
+  ],
+  "quotes": [
+    "The need for multilingual support teams and automated monitoring of rule changes."
+  ],
+  "notes_for_reasoner": "Consider how the identified risks may impact latency and data quality in product development and deployment."
+}

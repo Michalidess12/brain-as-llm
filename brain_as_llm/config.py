@@ -23,8 +23,10 @@ class Settings:
 def load_settings() -> Settings:
     """Load settings from environment variables once per process."""
 
+    openai_key = os.getenv("OPENAI_API_KEY") or os.getenv("openai")
+
     return Settings(
-        openai_api_key=os.getenv("OPENAI_API_KEY"),
+        openai_api_key=openai_key,
         openai_base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
         small_model=os.getenv("BRAIN_SMALL_MODEL", "gpt-4o-mini"),
         large_model=os.getenv("BRAIN_LARGE_MODEL", "gpt-4o"),

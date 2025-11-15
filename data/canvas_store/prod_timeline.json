@@ -1,0 +1,40 @@
+{
+  "raw_chunks": [
+    "The product strategy review describes a neuro-symbolic assistant designed for daily planning\nand health monitoring. The memo states that customers struggle with chaotic schedules, so the\nteam proposes a multi-stage architecture that first compresses calendar streams and wearable\ndata into a structured canvas. This canvas contains timelines of predicted commitments,\nentities such as teammates, medications, and devices, and direct quotes from recent\ncommunications. The expert reasoning module then performs scenario planning, highlighting\nrisks like missed handoffs, medication conflicts, or duplicate meetings. Key milestones:\n- Q3 pilot with ten enterprise teams that already adopted the context compression plugin.\n- Q4 expansion that integrates with hospital record systems and adds clinician review loops.\nThe risks listed include data quality gaps, regulatory questions for medical guidance, and\nlatency when downloading raw transcripts. The memo emphasizes that a lightweight controller\nshould adapt reasoning depth to difficulty so latency and token usage remain low."
+  ],
+  "summaries": [
+    "The document outlines a neuro-symbolic assistant for daily planning and health monitoring, detailing key milestones and associated risks."
+  ],
+  "facts": [
+    "The product strategy review focuses on a neuro-symbolic assistant.",
+    "Customers face challenges with chaotic schedules.",
+    "A multi-stage architecture is proposed to compress calendar streams and wearable data.",
+    "The structured canvas includes timelines, entities, and quotes from communications.",
+    "An expert reasoning module performs scenario planning to identify risks.",
+    "Key milestones include a Q3 pilot and a Q4 expansion."
+  ],
+  "entities": [
+    {
+      "name": "neuro-symbolic assistant",
+      "type": "Product",
+      "description": "An assistant designed for daily planning and health monitoring."
+    },
+    {
+      "name": "calendar streams",
+      "type": "Data",
+      "description": "Data sources related to scheduling and appointments."
+    },
+    {
+      "name": "wearable data",
+      "type": "Data",
+      "description": "Health-related data collected from wearable devices."
+    },
+    {
+      "name": "expert reasoning module",
+      "type": "Component",
+      "description": "Module that performs scenario planning and risk assessment."
+    }
+  ],
+  "quotes": [],
+  "notes_for_reasoner": "Focus on the timing commitments for the Q3 pilot and Q4 expansion, as well as the associated risks."
+}

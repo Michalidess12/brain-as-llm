@@ -71,65 +71,6 @@ Use `--use-dummy` for an offline smoke test without external API calls. Canvases
 
 The CLI saves detailed outputs to `results/experiments_<timestamp>.jsonl` and prints aggregate metrics (average tokens and latency for both pipelines).
 
-## Phase 1 – OpenAI baseline vs brain experiment
-
-Follow these steps to reproduce the Phase 1 validation run that compares the single-call baseline against the brain pipeline on the same workload:
-
-1. **Install + test locally**
-
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # or .venv\\Scripts\\activate on Windows
-   pip install -r requirements.txt
-   pytest -q
-   ```
-
-2. **Configure OpenAI credentials and model choices**
-
-   ```bash
-   export OPENAI_API_KEY="sk-..."                     # do not commit this value
-   export OPENAI_BASE_URL="https://api.openai.com/v1"  # optional override
-   export BRAIN_SMALL_MODEL="gpt-4o-mini"
-   export BRAIN_LARGE_MODEL="gpt-4o"
-   ```
-
-   Leave `--use-dummy` unset so the runner talks to the real OpenAI backend.
-
-3. **Create/verify `data/testcases.jsonl`**
-
-   The repo ships with a 18-line JSONL file referencing documents in `data/`. Edit or extend it as needed; the format is:
-
-   ```json
-   {"id": "product_summary_bullets", "doc_id": "product_strategy", "raw_text_path": "data/product_strategy.txt", "question": "..."}
-   ```
-
-4. **Run the combined baseline + brain experiment**
-
-   ```bash
-   python -m brain_as_llm.experiments.runner run data/testcases.jsonl \
-       --output-dir results \
-       --policy-name openai_brain_v1
-   ```
-
-   The CLI runs baseline and brain back-to-back on every testcase, saves a JSONL report such as `results/experiments_20240101_120000.jsonl`, and prints a summary comparing token usage and latency across both strategies.
-
-5. **Review outputs**
-
-   * Inspect the JSONL file for per-case answers, plan metadata, token usage, and latency.
-   * Check the final console summary that now spells out baseline vs brain averages plus deltas to confirm the OpenAI wiring behaved as expected.
-
-6. **Interpret results later**
-
-   Use the new helper command to re-summarize any saved JSONL file without rerunning the workloads:
-
-   ```bash
-   python -m brain_as_llm.experiments.runner interpret-results results/experiments_20250101_120000.jsonl
-   ```
-
-   This prints the same JSON summary object plus the human-readable baseline-vs-brain comparison banner.
-
-Use `--use-dummy` only when you explicitly want to bypass network calls (e.g., local smoke tests or CI).
-
 ### Looping experiments
 
 To run 10–20 iterations automatically (stopping once the brain pipeline matches or beats baseline latency/tokens), use:
@@ -149,6 +90,45 @@ python -m brain_as_llm.experiments.runner analyze-policies --results-glob "resul
 ```
 
 The policy manager computes average expert tokens/latency per `policy_name` and recommends the best historical policy per testcase/workload.
+
+## Phase 1 – OpenAI baseline vs brain experiment
+
+Follow this checklist to validate real OpenAI models end-to-end:
+
+1. **Install & test**
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements.txt
+   pytest -q
+   ```
+   (The tests rely on the dummy backend so they run offline.)
+
+2. **Configure OpenAI credentials**
+   ```bash
+   export OPENAI_API_KEY="sk-your-key"   # or set OPENAI_API_KEY in your shell profile
+   export OPENAI_BASE_URL="https://api.openai.com/v1"  # optional
+   export BRAIN_SMALL_MODEL="gpt-4o-mini"
+   export BRAIN_LARGE_MODEL="gpt-4o"
+   ```
+   If you already exported a variable named `openai`, the config loader will fall back to it, but `OPENAI_API_KEY` is recommended.
+
+3. **Prepare testcases**
+   - Use `data/testcases.jsonl` (16 prompts across the bundled product and risk briefs) or create your own JSONL file following the same schema.
+
+4. **Run the OpenAI-backed comparison**
+   ```bash
+   python -m brain_as_llm.experiments.runner run data/testcases.jsonl \
+     --output-dir results \
+     --policy-name openai_brain_v1
+   ```
+   (Do **not** pass `--use-dummy`; absence of the flag means real OpenAI calls.)
+
+5. **Inspect outputs**
+   - Detailed per-testcase records: `results/experiments_<timestamp>.jsonl`
+   - CLI prints a JSON summary plus a short human-readable line comparing average expert tokens & latency for baseline vs. brain.
+
+This workflow is our Phase 1 sanity check that both the single-shot baseline and the brain-as-LLM pipeline succeed against production models.
 
 ## Testing
 

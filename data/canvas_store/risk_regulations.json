@@ -1,0 +1,35 @@
+{
+  "raw_chunks": [
+    "A compliance briefing outlines three categories of risk for a fintech launch in Latin America.\nFirst, macroeconomic volatility could reduce consumer lending appetite; the analysts cite\nArgentina's sudden policy shifts and Brazil's fluctuating benchmark rates. Second, data\nresidency laws require that sensitive financial telemetry remains inside national borders, so\nengineering must prepare hybrid deployments. Third, competition from super-app providers may\nundercut pricing. The document quotes regional partners describing the need for multilingual\nsupport teams and automated monitoring of rule changes. Proposed mitigations: phased rollouts\nstarting with Brazil and Chile, automated legal alerts, and frequent tabletop exercises."
+  ],
+  "summaries": [
+    "The document discusses regulatory constraints for fintech in Latin America, focusing on macroeconomic risks, data residency laws, and competition, while proposing mitigations for compliance."
+  ],
+  "facts": [
+    "Macroeconomic volatility may reduce consumer lending appetite.",
+    "Data residency laws require sensitive financial data to remain within national borders.",
+    "Competition from super-app providers could impact pricing.",
+    "Proposed mitigations include phased rollouts, automated legal alerts, and tabletop exercises."
+  ],
+  "entities": [
+    {
+      "name": "Argentina",
+      "type": "Country",
+      "description": "Country in South America experiencing sudden policy shifts."
+    },
+    {
+      "name": "Brazil",
+      "type": "Country",
+      "description": "Country in South America with fluctuating benchmark rates."
+    },
+    {
+      "name": "Chile",
+      "type": "Country",
+      "description": "Country in South America proposed for phased rollout."
+    }
+  ],
+  "quotes": [
+    "The need for multilingual support teams and automated monitoring of rule changes."
+  ],
+  "notes_for_reasoner": "Focus on the implications of data residency laws and the need for compliance strategies in fintech deployment."
+}

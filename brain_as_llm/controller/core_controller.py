@@ -147,8 +147,9 @@ class CoreController:
         ).strip()
 
     def _parse_response(self, text: str) -> Dict[str, Any]:
+        cleaned = self._clean_json_text(text)
         try:
-            data = json.loads(text)
+            data = json.loads(cleaned)
         except json.JSONDecodeError:
             logger.warning("Controller returned non-JSON response; applying heuristic parsing")
             difficulty = "hard" if "hard" in text.lower() else ("easy" if "easy" in text.lower() else "medium")
@@ -181,6 +182,15 @@ class CoreController:
         if data["speculation_mode"] not in {"off", "conservative", "aggressive"}:
             data["speculation_mode"] = "off"
         return data
+
+    def _clean_json_text(self, text: str) -> str:
+        stripped = text.strip()
+        if stripped.startswith("```"):
+            lines = [line for line in stripped.splitlines() if not line.strip().startswith("```")]
+            stripped = "\n".join(lines).strip()
+        if stripped.startswith("json"):
+            stripped = stripped[4:].strip()
+        return stripped
 
 
 __all__ = ["CoreController", "ControlPlan", "ControllerConfig", "BudgetContract"]
