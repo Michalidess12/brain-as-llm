@@ -139,6 +139,26 @@ def analyze_policies(
         typer.echo(f"- {testcase}: best_policy={rec['policy_name']} (tokens={rec['expert_tokens']}, latency={rec['expert_latency']:.4f}s)")
 
 
+@app.command("interpret-results")
+def interpret_results(
+    results_path: Path = typer.Argument(..., help="Path to a prior results JSONL file"),
+) -> None:
+    """Summarize metrics from an existing results file."""
+
+    if not results_path.exists():
+        raise typer.BadParameter(f"Results file not found: {results_path}")
+
+    setup_logging()
+    records = _load_jsonl_records(results_path)
+    metrics = [_record_to_metrics(record) for record in records]
+    if not metrics:
+        raise typer.BadParameter("Results file did not contain any records to summarize")
+
+    summary = _summarize(metrics)
+    typer.echo(json.dumps(summary, indent=2))
+    typer.echo(_format_run_summary(summary))
+
+
 def _build_clients(use_dummy: bool, settings: Any) -> Tuple[Any, Any]:
     if use_dummy:
         dummy = DummyLLMClient()
@@ -200,17 +220,7 @@ def _execute_cases(
             "doc_id": doc_id,
             "policy_name": policy_name,
         }
-        per_case_metrics.append(
-            {
-                "baseline_tokens": baseline_result["usage"].get("total_tokens", 0),
-                "baseline_latency": baseline_result["latency_seconds"],
-                "brain_tokens": _brain_total_tokens(brain_result["usage"]),
-                "brain_reasoner_tokens": brain_result["usage"]["reasoner_tokens"].get("total_tokens", 0),
-                "brain_latency": brain_result["latency_seconds"],
-                "brain_reasoner_latency": brain_result.get("reasoner_latency_seconds", 0.0),
-                "id": case.get("id"),
-            }
-        )
+        per_case_metrics.append(_record_to_metrics(record))
         lines.append(json.dumps(record))
 
     return lines, per_case_metrics
@@ -236,12 +246,45 @@ def _load_cases(path: Path) -> List[Dict[str, Any]]:
     return cases
 
 
+def _load_jsonl_records(path: Path) -> List[Dict[str, Any]]:
+    records: List[Dict[str, Any]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        records.append(json.loads(line))
+    return records
+
+
+def _usage_total(usage: Dict[str, Any]) -> int:
+    total = usage.get("total_tokens")
+    if total is None:
+        total = int(usage.get("prompt_tokens", 0)) + int(usage.get("completion_tokens", 0))
+    return int(total)
+
+
 def _brain_total_tokens(usage: Dict[str, Dict[str, int]]) -> int:
     keys = ["encoder_tokens", "controller_tokens", "reasoner_tokens"]
     total = 0
     for key in keys:
         total += int(usage.get(key, {}).get("total_tokens", 0))
     return total
+
+
+def _record_to_metrics(record: Dict[str, Any]) -> Dict[str, Any]:
+    baseline = record.get("baseline", {})
+    brain = record.get("brain", {})
+    baseline_usage = baseline.get("usage", {})
+    brain_usage = brain.get("usage", {})
+    metrics = {
+        "baseline_tokens": _usage_total(baseline_usage),
+        "baseline_latency": float(baseline.get("latency_seconds", 0.0)),
+        "brain_tokens": _brain_total_tokens(brain_usage),
+        "brain_reasoner_tokens": int(brain_usage.get("reasoner_tokens", {}).get("total_tokens", 0)),
+        "brain_latency": float(brain.get("latency_seconds", 0.0)),
+        "brain_reasoner_latency": float(brain.get("reasoner_latency_seconds", 0.0)),
+        "id": record.get("id"),
+    }
+    return metrics
 
 
 def _summarize(metrics: Iterable[Dict[str, Any]]) -> Dict[str, float]:

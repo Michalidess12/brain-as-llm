@@ -118,6 +118,16 @@ Follow these steps to reproduce the Phase 1 validation run that compares the sin
    * Inspect the JSONL file for per-case answers, plan metadata, token usage, and latency.
    * Check the final console summary that now spells out baseline vs brain averages plus deltas to confirm the OpenAI wiring behaved as expected.
 
+6. **Interpret results later**
+
+   Use the new helper command to re-summarize any saved JSONL file without rerunning the workloads:
+
+   ```bash
+   python -m brain_as_llm.experiments.runner interpret-results results/experiments_20250101_120000.jsonl
+   ```
+
+   This prints the same JSON summary object plus the human-readable baseline-vs-brain comparison banner.
+
 Use `--use-dummy` only when you explicitly want to bypass network calls (e.g., local smoke tests or CI).
 
 ### Looping experiments
